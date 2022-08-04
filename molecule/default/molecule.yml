@@ -1,0 +1,25 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: ansible-pass-centos8
+    image: quay.io/centos/centos:stream8
+    command: /sbin/init
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+lint: |
+  set -e
+  ansible-lint
+  yamllint .
+  shellcheck files/*
+provisioner:
+  name: ansible
+  playbooks:
+    cleanup: ../resources/playbooks/cleanup.yml
+    converge: ../resources/playbooks/converge.yml
+    prepare: ../resources/playbooks/prepare.yml

@@ -1,0 +1,70 @@
+---
+
+#
+# Tasks
+
+- name: "Get entry from passwd for {{ vault_user }}"
+  getent:
+    database: passwd
+    key: "{{ vault_user }}"
+
+- name: Set home_dir and shell
+  set_fact:
+    home_dir: "{{ getent_passwd[vault_user][4] }}"
+    shell: "{{ getent_passwd[vault_user][5] }}"
+
+- name: Validate home_dir
+  assert:
+    that:
+      - home_dir | length > 6
+      - home_dir not in ['/', '/root']
+
+- name: Check if user shell is valid
+  # yamllint disable-line rule:line-length
+  when: shell in ['/sbin/nologin', '/sbin/halt', '/sbin/shutdown', '/bin/sync']
+  fail:
+    msg: "Invalid shell for {{ vault_user }}"
+
+- name: Remove GPG agent config
+  become: true
+  file:
+    path: "{{ home_dir ~ '/.gnupg/gpg-agent.conf' }}"
+    state: absent
+
+- name: Configure bashrc for GPG
+  become: true
+  lineinfile:
+    path: "{{ home_dir ~ '/.bashrc' }}"
+    regexp: '^export GPG_TTY'
+    line: 'export GPG_TTY=$(tty)'
+    state: absent
+    create: true
+    mode: 0644
+
+- name: Unconfigure bash_logout for GPG
+  become: true
+  lineinfile:
+    path: "{{ home_dir ~ '/.bash_logout' }}"
+    regexp: 'gpgconf'
+    line: 'gpgconf --kill gpg-agent'
+    state: absent
+    create: true
+    mode: 0644
+
+- name: Unconfigure bash_profile for .ansible_pass_gpg
+  become: true
+  lineinfile:
+    path: "{{ home_dir ~ '/.bash_profile' }}"
+    regexp: '^export ANSIBLE_VAULT_PASSWORD_FILE'
+    line: 'export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible_pass_gpg'
+    state: absent
+    create: true
+    mode: 0644
+
+- name: Remove .ansible_pass_gpg
+  become: true
+  file:
+    path: "{{ home_dir ~ '/.ansible_pass_gpg' }}"
+    state: absent
+
+...

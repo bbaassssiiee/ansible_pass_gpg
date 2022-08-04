@@ -1,0 +1,22 @@
+---
+
+#
+dependency:
+  name: galaxy
+driver:
+  name: delegated
+  options:
+    managed: false
+    login_cmd_template: 'ssh svc_bind_rtg@{instance}'
+platforms:
+  - name: ansible-test-machine
+lint: |
+  set -e
+  ansible-lint
+  yamllint .
+  shellcheck
+provisioner:
+  name: ansible
+  playbooks:
+    cleanup: ../resources/playbooks/cleanup.yml
+    converge: ../resources/playbooks/converge.yml

@@ -1,0 +1,5 @@
+---
+# Default variables
+default_cache_ttl: '7200'
+desired_state: present
+vault_user: "{{ lookup('env','USER') }}"

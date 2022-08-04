@@ -1,0 +1,14 @@
+---
+
+#
+- name: Cleanup
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    desired_state: absent
+
+  tasks:
+    - name: Removing files created by role
+      include_role:
+        name: "ansible_pass_gpg"

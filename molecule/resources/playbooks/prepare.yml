@@ -1,0 +1,19 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars_files: ../../../defaults/main.yml
+  tasks:
+    - name: Create users group
+      group:
+        name: users
+        state: present
+
+    - name: Create user
+      user:
+        name: "{{ vault_user }}"
+        group: users
+        shell: /bin/bash
+        state: present

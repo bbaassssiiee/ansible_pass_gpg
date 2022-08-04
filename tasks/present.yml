@@ -1,0 +1,102 @@
+---
+
+- name: Get entry from passwd for user
+  getent:
+    database: passwd
+    key: "{{ vault_user }}"
+
+- name: Set home_dir, group ID and shell
+  set_fact:
+    home_dir: "{{ getent_passwd[vault_user][4] }}"
+    group_gid: "{{ getent_passwd[vault_user][2] }}"
+    shell: "{{ getent_passwd[vault_user][5] }}"
+
+- debug: var=vault_gid
+
+- name: Get group ID entry
+  getent:
+    database: group
+    key: "{{ group_gid }}"
+
+- name: Lookup group_name
+  set_fact:
+    group_name: "{{ lookup('dict',getent_group)['key'] }}"
+
+- debug: var=group_name
+
+- name: Validate result code
+  assert:
+    that:
+      - home_dir | length > 6
+      - home_dir not in ['/', '/root']
+
+- name: Check if user shell is valid
+  # yamllint disable-line rule:line-length
+  when: shell in ['/sbin/nologin', '/sbin/halt', '/sbin/shutdown', '/bin/sync']
+  fail:
+    msg: "Invalid shell for {{ vault_user }}"
+
+- name: Create GPG agent config directory
+  become: true
+  file:
+    path: "{{ home_dir ~ '/.gnupg' }}"
+    state: directory
+    owner: "{{ vault_user }}"
+    group: "{{ group_name }}"
+    mode: 0700
+
+- name: Install GPG agent config file
+  become: true
+  template:
+    src: gpg-agent.conf.j2
+    dest: "{{ home_dir ~ '/.gnupg/gpg-agent.conf' }}"
+    owner: "{{ vault_user }}"
+    group: "{{ group_name }}"
+    mode: 0600
+
+- name: Configure bashrc for GPG
+  become: true
+  lineinfile:
+    path: "{{ home_dir ~ '/.bashrc' }}"
+    regexp: '^export GPG_TTY'
+    line: 'export GPG_TTY=$(tty)'
+    state: present
+    create: true
+    owner: "{{ vault_user }}"
+    group: "{{ group_name }}"
+    mode: 0644
+
+- name: Configure bash_logout for GPG
+  become: true
+  lineinfile:
+    path: "{{ home_dir ~ '/.bash_logout' }}"
+    regexp: 'gpgconf'
+    line: 'gpgconf --kill gpg-agent'
+    state: present
+    create: true
+    owner: "{{ vault_user }}"
+    group: "{{ group_name }}"
+    mode: 0644
+
+- name: Configure bash_profile for .ansible_pass_gpg
+  become: true
+  lineinfile:
+    path: "{{ home_dir ~ '/.bash_profile' }}"
+    regexp: '^export ANSIBLE_VAULT_PASSWORD_FILE'
+    line: 'export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible_pass_gpg'
+    state: present
+    create: true
+    owner: "{{ vault_user }}"
+    group: "{{ group_name }}"
+    mode: 0644
+
+- name: Install .ansible_pass_gpg
+  become: true
+  copy:
+    src: ansible_pass_gpg
+    dest: "{{ home_dir ~ '/.ansible_pass_gpg' }}"
+    owner: "{{ vault_user }}"
+    group: "{{ group_name }}"
+    mode: 0500
+
+...

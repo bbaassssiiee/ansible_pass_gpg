@@ -1,0 +1,12 @@
+---
+
+#
+- name: Converge
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Play the role
+      include_role:
+        name: "ansible_pass_gpg"
+...
