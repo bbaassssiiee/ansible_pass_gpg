@@ -1,4 +1,13 @@
 #!/bin/sh
 # This decrypts the ansible password from ~/.vault_pw.gpg
 # You should have GPG keys in place and encrypt the password into that file.
-exec gpg -q -d "${HOME}/.vault_pw.gpg"
+ARG=$1
+
+ID=$(echo "$ARG"| sed 's/--vault-id=//')
+
+if [ -z $ID ]
+then
+    cat "${HOME}/.vault_pass"
+else
+    exec gpg -q -d "${HOME}/.vault_pass_$ID.gpg"
+fi
