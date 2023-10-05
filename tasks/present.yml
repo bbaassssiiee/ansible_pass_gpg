@@ -1,5 +1,10 @@
 ---
 
+- name: Install pinentry
+  yum:
+    name: pinentry
+    state: present
+
 - name: Get entry from passwd for user
   getent:
     database: passwd
